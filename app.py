@@ -1,7 +1,8 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 import requests
 
 app = Flask(__name__)
+app.secret_key = 'your_secret_key'
 
 API_URL = "https://tangerine-parsnip-y6waz72u9e7gr7id.salad.cloud/v1/chat/completions"
 HEADERS = {
@@ -9,7 +10,23 @@ HEADERS = {
 }
 
 @app.route('/')
+def login():
+    return render_template('login.html')
+
+@app.route('/login', methods=['POST'])
+def do_login():
+    username = request.form['username']
+    password = request.form['password']
+    if username == 'Cluster' and password == '123':
+        session['logged_in'] = True
+        return redirect(url_for('index'))
+    else:
+        return 'Invalid credentials', 401
+
+@app.route('/index')
 def index():
+    if not session.get('logged_in'):
+        return redirect(url_for('login'))
     return render_template('index.html')
 
 @app.route('/chat', methods=['POST'])
