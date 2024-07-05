@@ -15,13 +15,18 @@ def login():
 
 @app.route('/login', methods=['POST'])
 def do_login():
-    username = request.form['username']
+    user_id = request.form['user_id']
     password = request.form['password']
-    if username == 'Cluster' and password == '123':
+    if user_id == 'Cluster' and password == '123':
         session['logged_in'] = True
         return redirect(url_for('index'))
     else:
-        return 'Invalid credentials', 401
+        return redirect(url_for('login'))
+
+@app.route('/logout')
+def logout():
+    session.pop('logged_in', None)
+    return redirect(url_for('login'))
 
 @app.route('/index')
 def index():
@@ -41,12 +46,15 @@ def chat():
         "stream": False,
         "max_tokens": 128
     }
-    
-    response = requests.post(API_URL, headers=HEADERS, json=payload)
-    data = response.json()
-    assistant_message = data['choices'][0]['message']['content']
-    
-    return jsonify({'message': assistant_message})
+
+    try:
+        response = requests.post(API_URL, headers=HEADERS, json=payload)
+        response.raise_for_status()  # Raise an HTTPError for bad responses
+        data = response.json()
+        assistant_message = data['choices'][0]['message']['content']
+        return jsonify({'message': assistant_message})
+    except requests.exceptions.RequestException as e:
+        return jsonify({'message': 'Error: Could not contact the AI model.'}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
