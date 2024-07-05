@@ -268,8 +268,7 @@ def get_ai_response(user_message):
             {"role": "system", "content": "You are a helpful assistant."},
             {"role": "user", "content": user_message}
         ],
-        "stream": False,
-        "max_tokens": 128
+        "stream": False
     }
 
     response = requests.post(API_URL, headers=HEADERS, json=payload)
