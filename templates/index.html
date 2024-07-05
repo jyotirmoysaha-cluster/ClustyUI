@@ -4,90 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat with Clusty</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
-        #chat-box {
-            width: 80%;
-            max-width: 600px;
-            margin: 50px auto;
-            border: 1px solid #ccc;
-            padding: 10px;
-            border-radius: 5px;
-            background-color: #f9f9f9;
-        }
-        .message {
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 5px;
-        }
-        .user {
-            background-color: #e0f7fa;
-            text-align: right;
-        }
-        .assistant {
-            background-color: #f1f8e9;
-        }
-        #input-box {
-            display: flex;
-            margin-top: 10px;
-        }
-        #input-box input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px 0 0 5px;
-        }
-        #input-box button {
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-left: none;
-            background-color: #007bff;
-            color: white;
-            border-radius: 0 5px 5px 0;
-            cursor: pointer;
-        }
-    </style>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
 </head>
 <body>
-
-<div id="chat-box">
-    <div class="message assistant">Hello! I am Clusty, an AI assistant developed by Cluster-Algopix. How can I help you today?</div>
-</div>
-<div id="input-box">
-    <input type="text" id="user-input" placeholder="Type your message here...">
-    <button onclick="sendMessage()">Send</button>
-</div>
-
-<script>
-    async function sendMessage() {
-        const userInput = document.getElementById('user-input').value;
-        if (!userInput) return;
-        
-        const chatBox = document.getElementById('chat-box');
-        const userMessageDiv = document.createElement('div');
-        userMessageDiv.classList.add('message', 'user');
-        userMessageDiv.innerText = userInput;
-        chatBox.appendChild(userMessageDiv);
-        
-        document.getElementById('user-input').value = '';
-        
-        const response = await fetch('/chat', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: userInput })
-        });
-        
-        const data = await response.json();
-        const assistantMessageDiv = document.createElement('div');
-        assistantMessageDiv.classList.add('message', 'assistant');
-        assistantMessageDiv.innerText = data.message;
-        chatBox.appendChild(assistantMessageDiv);
-        
-        chatBox.scrollTop = chatBox.scrollHeight;
-    }
-</script>
-
+    <div id="chat-container">
+        <div id="chat-box">
+            <div class="message assistant">Hello! I am Clusty, an AI assistant developed by Cluster-Algopix. How can I help you today?</div>
+        </div>
+        <div id="input-box">
+            <input type="text" id="user-input" placeholder="Type your message here...">
+            <button onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/scripts.js') }}"></script>
 </body>
 </html>
