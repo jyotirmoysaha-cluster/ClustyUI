@@ -1,5 +1,6 @@
 from flask import Flask, render_template_string, request, redirect, url_for, session, jsonify
 import requests
+from retrying import retry
 
 app = Flask(__name__)
 app.secret_key = 'default_secret_key'
@@ -141,14 +142,9 @@ index_html = """
             border-radius: 0 5px 5px 0;
             cursor: pointer;
         }
-        .logout-box {
-            padding: 10px;
+        .loading {
             text-align: center;
-            border-top: 1px solid #ccc;
-        }
-        .logout-box a {
-            text-decoration: none;
-            color: #007bff;
+            padding: 10px;
         }
     </style>
 </head>
@@ -160,6 +156,9 @@ index_html = """
         <div id="input-box" class="input-box">
             <input type="text" id="user-input" placeholder="Type your message here...">
             <button onclick="sendMessage()">Send</button>
+        </div>
+        <div id="loading" class="loading" style="display:none;">
+            <img src="https://i.imgur.com/PwFpbLL.gif" alt="Loading..." width="50" height="50">
         </div>
         <div class="logout-box">
             <a href="/logout">Logout</a>
@@ -178,14 +177,18 @@ index_html = """
 
             document.getElementById('user-input').value = '';
 
+            showLoading();
+
             try {
-                const response = await fetch('/chat', {
+                const response = await fetchWithRetries('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ message: userInput })
                 });
 
                 const data = await response.json();
+                hideLoading();
+
                 const assistantMessageDiv = document.createElement('div');
                 assistantMessageDiv.classList.add('message', 'assistant');
                 assistantMessageDiv.innerText = data.message;
@@ -193,6 +196,8 @@ index_html = """
 
                 chatBox.scrollTop = chatBox.scrollHeight;
             } catch (error) {
+                hideLoading();
+
                 const errorMessageDiv = document.createElement('div');
                 errorMessageDiv.classList.add('message', 'assistant');
                 errorMessageDiv.innerText = 'Error: Could not contact the AI model.';
@@ -200,6 +205,30 @@ index_html = """
 
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
+        }
+
+        async function fetchWithRetries(url, options, retries = 3) {
+            let attempt = 0;
+            while (attempt < retries) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok) {
+                        return response;
+                    }
+                } catch (error) {
+                    console.error('Fetch failed, retrying...', error);
+                }
+                attempt++;
+            }
+            throw new Error('Max retries exceeded');
+        }
+
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').style.display = 'none';
         }
     </script>
 </body>
@@ -231,9 +260,8 @@ def index():
         return redirect(url_for('login'))
     return render_template_string(index_html)
 
-@app.route('/chat', methods=['POST'])
-def chat():
-    user_message = request.json.get('message')
+@retry(stop_max_attempt_number=3, wait_fixed=10000)  # Retry 3 times with a 2-second interval
+def get_ai_response(user_message):
     payload = {
         "model": "Jyotirmoy-Cluster/Clusty",
         "messages": [
@@ -244,14 +272,21 @@ def chat():
         "max_tokens": 128
     }
 
+    response = requests.post(API_URL, headers=HEADERS, json=payload)
+    response.raise_for_status()
+    return response.json()['choices'][0]['message']['content']
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    user_message = request.json.get('message')
+    
     try:
-        response = requests.post(API_URL, headers=HEADERS, json=payload)
-        response.raise_for_status()
-        data = response.json()
-        assistant_message = data['choices'][0]['message']['content']
+        assistant_message = get_ai_response(user_message)
         return jsonify({'message': assistant_message})
-    except requests.exceptions.RequestException as e:
-        return jsonify({'message': 'Error: Could not contact the AI model.'}), 500
+    except Exception as e:
+        print(f"Error contacting AI model: {str(e)}")
+        return jsonify({'message': 'Error: Could not contact the AI model.'}), 504
 
 if __name__ == '__main__':
     app.run(debug=True)
+
