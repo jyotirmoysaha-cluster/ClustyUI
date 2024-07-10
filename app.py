@@ -5,9 +5,10 @@ from retrying import retry
 app = Flask(__name__)
 app.secret_key = 'default_secret_key'
 
-API_URL = "https://tangerine-parsnip-y6waz72u9e7gr7id.salad.cloud/v1/chat/completions"
+API_URL = "https://salmon-ranch-npn2zalp31eq19zg.salad.cloud/v1/chat/completions"
 HEADERS = {
-    'Content-Type': 'application/json'
+    'Content-Type': 'application/json',
+    'Authorization': 'Bearer API12345'
 }
 
 login_html = """
@@ -154,6 +155,7 @@ index_html = """
             <div class="message assistant">Hello! I am Clusty, an AI assistant developed by Cluster-Algopix. How can I help you today?</div>
         </div>
         <div id="input-box" class="input-box">
+            <input type="text" id="system-input" placeholder="Enter system message here...">
             <input type="text" id="user-input" placeholder="Type your message here...">
             <button onclick="sendMessage()">Send</button>
         </div>
@@ -166,8 +168,9 @@ index_html = """
     </div>
     <script>
         async function sendMessage() {
+            const systemInput = document.getElementById('system-input').value;
             const userInput = document.getElementById('user-input').value;
-            if (!userInput) return;
+            if (!systemInput || !userInput) return;
 
             const chatBox = document.getElementById('chat-box');
             const userMessageDiv = document.createElement('div');
@@ -183,7 +186,7 @@ index_html = """
                 const response = await fetchWithRetries('/chat', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ message: userInput })
+                    body: JSON.stringify({ systemMessage: systemInput, userMessage: userInput })
                 });
 
                 const data = await response.json();
@@ -260,32 +263,41 @@ def index():
         return redirect(url_for('login'))
     return render_template_string(index_html)
 
-@retry(stop_max_attempt_number=3, wait_fixed=10000)  # Retry 3 times with a 2-second interval
-def get_ai_response(user_message):
+@retry(stop_max_attempt_number=3, wait_fixed=2000)  # Retry 3 times with a 2-second interval
+def get_ai_response(system_message, user_message):
     payload = {
-        "model": "Jyotirmoy-Cluster/Clusty",
+        "model": "Clusty",
         "messages": [
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": user_message}
+            {
+                "role": "system",
+                "content": system_message
+            },
+            {
+                "role": "user",
+                "content": user_message
+            }
         ],
-        "stream": False
+        "temperature": 0.5,
+        "top_p": 1.0,
+        "min_new_tokens": 1
     }
 
     response = requests.post(API_URL, headers=HEADERS, json=payload)
-    response.raise_for_status()
-    return response.json()['choices'][0]['message']['content']
+    response.raise_for_status()  # Raise an exception for HTTP errors
+    return response.json()
 
 @app.route('/chat', methods=['POST'])
 def chat():
-    user_message = request.json.get('message')
-    
+    data = request.json
+    system_message = data['systemMessage']
+    user_message = data['userMessage']
+
     try:
-        assistant_message = get_ai_response(user_message)
-        return jsonify({'message': assistant_message})
+        ai_response = get_ai_response(system_message, user_message)
+        assistant_message = ai_response['choices'][0]['message']['content']
+        return jsonify(message=assistant_message)
     except Exception as e:
-        print(f"Error contacting AI model: {str(e)}")
-        return jsonify({'message': 'Error: Could not contact the AI model.'}), 504
+        return jsonify(message=f"Error: Could not contact the AI model. {str(e)}")
 
 if __name__ == '__main__':
     app.run(debug=True)
-
