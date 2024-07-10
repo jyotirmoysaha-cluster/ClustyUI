@@ -213,7 +213,6 @@ index_html = """
 
         function formatResponse(response) {
     return response
-        .replace(/\n/g, '<br>') // Ensure the regular expression is properly enclosed
         .replace(/\* /g, '<li>') // Similarly, ensure other replacements use valid regular expression format
         .replace(/Bullet Points: <br>/g, 'Bullet Points: <ul>') + '</ul>';
 }
