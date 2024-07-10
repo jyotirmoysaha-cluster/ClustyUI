@@ -18,61 +18,45 @@ login_html = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #f0f2f5;
-            margin: 0;
-            padding: 0;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
         }
-        .login-container {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
-        .login-form {
-            background-color: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 400px;
-        }
-        .login-form h2 {
-            margin-bottom: 20px;
-        }
-        .login-form input {
-            width: 100%;
-            padding: 10px;
-            margin: 10px 0;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-        .login-form button {
-            width: 100%;
-            padding: 10px;
-            background-color: #007bff;
-            border: none;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
+        .container {
+            margin-top: 50px;
         }
     </style>
 </head>
 <body>
-    <div class="login-container">
-        <form action="/login" method="post" class="login-form">
-            <h2>Login</h2>
-            <input type="text" name="user_id" placeholder="User ID" required>
-            <input type="password" name="password" placeholder="Password" required>
-            <button type="submit">Login</button>
-        </form>
+    <div class="container">
+        <div class="row">
+            <div class="col s12 m6 offset-m3">
+                <div class="card">
+                    <div class="card-content">
+                        <span class="card-title">Login</span>
+                        <form action="/login" method="post">
+                            <div class="input-field">
+                                <input type="text" name="user_id" id="user_id" required>
+                                <label for="user_id">User ID</label>
+                            </div>
+                            <div class="input-field">
+                                <input type="password" name="password" id="password" required>
+                                <label for="password">Password</label>
+                            </div>
+                            <button type="submit" class="btn waves-effect waves-light">Login</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
 </body>
 </html>
 """
@@ -84,23 +68,23 @@ index_html = """
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chat with Clusty</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
     <style>
         body {
             font-family: Arial, sans-serif;
             background-color: #f0f2f5;
-            margin: 0;
-            padding: 0;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
+            margin: 0;
         }
         .chat-container {
             display: flex;
             flex-direction: column;
             width: 100%;
             max-width: 600px;
-            height: 100vh;
+            height: 80vh;
             background-color: white;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             border-radius: 10px;
@@ -147,6 +131,10 @@ index_html = """
             text-align: center;
             padding: 10px;
         }
+        .logout-box {
+            padding: 10px;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -163,7 +151,7 @@ index_html = """
             <img src="https://i.imgur.com/PwFpbLL.gif" alt="Loading..." width="50" height="50">
         </div>
         <div class="logout-box">
-            <a href="/logout">Logout</a>
+            <a href="/logout" class="btn">Logout</a>
         </div>
     </div>
     <script>
@@ -212,10 +200,8 @@ index_html = """
         }
 
         function formatResponse(response) {
-    return response
-        .replace(/\* /g, '<li>') // Similarly, ensure other replacements use valid regular expression format
-        .replace(/Bullet Points: <br>/g, 'Bullet Points: <ul>') + '</ul>';
-}
+            return response.replace(/\* /g, '<li>').replace(/Bullet Points: <br>/g, 'Bullet Points: <ul>') + '</ul>';
+        }
 
         async function fetchWithRetries(url, options, retries = 3) {
             let attempt = 0;
@@ -241,7 +227,6 @@ index_html = """
             document.getElementById('loading').style.display = 'none';
         }
     </script>
-
 </body>
 </html>
 """
@@ -271,7 +256,7 @@ def index():
         return redirect(url_for('login'))
     return render_template_string(index_html)
 
-@retry(stop_max_attempt_number=3, wait_fixed=2000)  # Retry 3 times with a 2-second interval
+@retry(stop_max_attempt_number=3, wait_fixed=2000)
 def get_ai_response(system_message, user_message):
     payload = {
         "model": "Clusty",
@@ -291,7 +276,7 @@ def get_ai_response(system_message, user_message):
     }
 
     response = requests.post(API_URL, headers=HEADERS, json=payload)
-    response.raise_for_status()  # Raise an exception for HTTP errors
+    response.raise_for_status()
     return response.json()
 
 @app.route('/chat', methods=['POST'])
