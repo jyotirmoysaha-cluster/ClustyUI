@@ -166,74 +166,82 @@ index_html = """
             <a href="/logout">Logout</a>
         </div>
     </div>
-    <script>
-        async function sendMessage() {
-            const systemInput = document.getElementById('system-input').value;
-            const userInput = document.getElementById('user-input').value;
-            if (!systemInput || !userInput) return;
+<script>
+    async function sendMessage() {
+        const systemInput = document.getElementById('system-input').value;
+        const userInput = document.getElementById('user-input').value;
+        if (!systemInput || !userInput) return;
 
-            const chatBox = document.getElementById('chat-box');
-            const userMessageDiv = document.createElement('div');
-            userMessageDiv.classList.add('message', 'user');
-            userMessageDiv.innerText = userInput;
-            chatBox.appendChild(userMessageDiv);
+        const chatBox = document.getElementById('chat-box');
+        const userMessageDiv = document.createElement('div');
+        userMessageDiv.classList.add('message', 'user');
+        userMessageDiv.innerText = userInput;
+        chatBox.appendChild(userMessageDiv);
 
-            document.getElementById('user-input').value = '';
+        document.getElementById('user-input').value = '';
 
-            showLoading();
+        showLoading();
 
+        try {
+            const response = await fetchWithRetries('/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ systemMessage: systemInput, userMessage: userInput })
+            });
+
+            const data = await response.json();
+            hideLoading();
+
+            const assistantMessageDiv = document.createElement('div');
+            assistantMessageDiv.classList.add('message', 'assistant');
+            assistantMessageDiv.innerHTML = formatResponse(data.message);
+            chatBox.appendChild(assistantMessageDiv);
+
+            chatBox.scrollTop = chatBox.scrollHeight;
+        } catch (error) {
+            hideLoading();
+
+            const errorMessageDiv = document.createElement('div');
+            errorMessageDiv.classList.add('message', 'assistant');
+            errorMessageDiv.innerText = 'Error: Could not contact the AI model.';
+            chatBox.appendChild(errorMessageDiv);
+
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+    }
+
+    function formatResponse(response) {
+        return response
+            .replace(/\n/g, '<br>')
+            .replace(/\* /g, '<li>')
+            .replace(/Bullet Points: <br>/g, 'Bullet Points: <ul>') + '</ul>';
+    }
+
+    async function fetchWithRetries(url, options, retries = 3) {
+        let attempt = 0;
+        while (attempt < retries) {
             try {
-                const response = await fetchWithRetries('/chat', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ systemMessage: systemInput, userMessage: userInput })
-                });
-
-                const data = await response.json();
-                hideLoading();
-
-                const assistantMessageDiv = document.createElement('div');
-                assistantMessageDiv.classList.add('message', 'assistant');
-                assistantMessageDiv.innerText = data.message;
-                chatBox.appendChild(assistantMessageDiv);
-
-                chatBox.scrollTop = chatBox.scrollHeight;
-            } catch (error) {
-                hideLoading();
-
-                const errorMessageDiv = document.createElement('div');
-                errorMessageDiv.classList.add('message', 'assistant');
-                errorMessageDiv.innerText = 'Error: Could not contact the AI model.';
-                chatBox.appendChild(errorMessageDiv);
-
-                chatBox.scrollTop = chatBox.scrollHeight;
-            }
-        }
-
-        async function fetchWithRetries(url, options, retries = 3) {
-            let attempt = 0;
-            while (attempt < retries) {
-                try {
-                    const response = await fetch(url, options);
-                    if (response.ok) {
-                        return response;
-                    }
-                } catch (error) {
-                    console.error('Fetch failed, retrying...', error);
+                const response = await fetch(url, options);
+                if (response.ok) {
+                    return response;
                 }
-                attempt++;
+            } catch (error) {
+                console.error('Fetch failed, retrying...', error);
             }
-            throw new Error('Max retries exceeded');
+            attempt++;
         }
+        throw new Error('Max retries exceeded');
+    }
 
-        function showLoading() {
-            document.getElementById('loading').style.display = 'block';
-        }
+    function showLoading() {
+        document.getElementById('loading').style.display = 'block';
+    }
 
-        function hideLoading() {
-            document.getElementById('loading').style.display = 'none';
-        }
-    </script>
+    function hideLoading() {
+        document.getElementById('loading').style.display = 'none';
+    }
+</script>
+
 </body>
 </html>
 """
